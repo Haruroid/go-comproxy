@@ -27,18 +27,21 @@ func HandleRequest(clientConn net.Conn) {
 			zr := lz4.NewReader(hostConn)
 			zw := lz4.NewWriter(hostConn)
 			go func() { //host->client(decompress)
-
 				io.Copy(clientConn, zr)
 				hostConn.Close()
 				clientConn.Close()
 			}()
 			go func() { //client->host(compress)
-				buf := make([]byte, 100)
+				buf := make([]byte, 4096)
 				for {
 					n, err := clientConn.Read(buf)
-					if n == 0 && err == io.EOF {
-						_ = clientConn.Close()
-						break
+					if n == 0 {
+						if err == io.EOF {
+							_ = clientConn.Close()
+							break
+						}
+						time.Sleep(time.Millisecond * 10)
+						continue
 					}
 					zw.Write(buf[:n])
 					zw.Flush()
@@ -51,12 +54,16 @@ func HandleRequest(clientConn net.Conn) {
 			zw := lz4.NewWriter(clientConn)
 			zr := lz4.NewReader(clientConn)
 			go func() { //host->client(compress)
-				buf := make([]byte, 100)
+				buf := make([]byte, 4096)
 				for {
 					n, err := hostConn.Read(buf)
-					if n == 0 && err == io.EOF {
-						_ = hostConn.Close()
-						break
+					if n == 0 {
+						if err == io.EOF {
+							_ = hostConn.Close()
+							break
+						}
+						time.Sleep(time.Millisecond * 10)
+						continue
 					}
 					zw.Write(buf[:n])
 					zw.Flush()
