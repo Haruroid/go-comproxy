@@ -14,6 +14,7 @@ var (
 	localport  = 8080
 	remoteHost = ""
 	isServer   = false
+	listen     = ""
 )
 
 func HandleRequest(clientConn net.Conn) {
@@ -75,18 +76,20 @@ func main() {
 	_localport := flag.Int("p", 8080, "local port")
 	_remoteHost := flag.String("r", "", "remote host:port")
 	_isServer := flag.Bool("s", false, "Server Mode")
+	_listen := flag.String("l", "", "listen localhost")
 	flag.Parse()
 	localport = *_localport
 	remoteHost = *_remoteHost
 	isServer = *_isServer
+	listen = *_listen
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", localport))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listen, localport))
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
 	defer listener.Close()
-	fmt.Println("Listening on localhost:" + fmt.Sprintf("%d", localport))
+	fmt.Println(fmt.Sprintf("Listening on %s:%d", listen, localport))
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
