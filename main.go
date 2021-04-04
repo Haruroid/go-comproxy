@@ -1,13 +1,14 @@
 package main
 
 import (
-	"compress/flate"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"time"
+
+	"github.com/pierrec/lz4"
 )
 
 var (
@@ -23,14 +24,15 @@ func HandleRequest(clientConn net.Conn) {
 		fmt.Println("err: dial " + remoteHost)
 	} else {
 		if !isServer {
+			zr := lz4.NewReader(hostConn)
+			zw := lz4.NewWriter(hostConn)
 			go func() { //host->client(decompress)
-				zr := flate.NewReader(hostConn)
+
 				io.Copy(clientConn, zr)
 				hostConn.Close()
 				clientConn.Close()
 			}()
 			go func() { //client->host(compress)
-				zw, _ := flate.NewWriter(hostConn, flate.BestCompression)
 				buf := make([]byte, 100)
 				for {
 					n, err := clientConn.Read(buf)
@@ -46,8 +48,9 @@ func HandleRequest(clientConn net.Conn) {
 				hostConn.Close()
 			}()
 		} else {
+			zw := lz4.NewWriter(clientConn)
+			zr := lz4.NewReader(clientConn)
 			go func() { //host->client(compress)
-				zw, _ := flate.NewWriter(clientConn, flate.BestCompression)
 				buf := make([]byte, 100)
 				for {
 					n, err := hostConn.Read(buf)
@@ -63,7 +66,6 @@ func HandleRequest(clientConn net.Conn) {
 				clientConn.Close()
 			}()
 			go func() { //client->host(decompress)
-				zr := flate.NewReader(clientConn)
 				io.Copy(hostConn, zr)
 				clientConn.Close()
 				hostConn.Close()
