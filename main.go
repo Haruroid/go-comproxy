@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/pierrec/lz4"
+	"github.com/klauspost/compress/zstd"
 )
 
 var (
@@ -24,8 +24,8 @@ func HandleRequest(clientConn net.Conn) {
 		fmt.Println("err: dial " + remoteHost)
 	} else {
 		if !isServer {
-			zr := lz4.NewReader(hostConn)
-			zw := lz4.NewWriter(hostConn)
+			zr, _ := zstd.NewReader(hostConn)
+			zw, _ := zstd.NewWriter(hostConn)
 			go func() { //host->client(decompress)
 				io.Copy(clientConn, zr)
 				hostConn.Close()
@@ -51,8 +51,8 @@ func HandleRequest(clientConn net.Conn) {
 				hostConn.Close()
 			}()
 		} else {
-			zw := lz4.NewWriter(clientConn)
-			zr := lz4.NewReader(clientConn)
+			zw, _ := zstd.NewWriter(clientConn)
+			zr, _ := zstd.NewReader(clientConn)
 			go func() { //host->client(compress)
 				buf := make([]byte, 4096)
 				for {
